@@ -33,6 +33,14 @@ for iGroup = 1:numel(opt.groups) % for each group
     % we figure out which subjects to take if not specified take all subjects
     if isfield(opt,'subjects') && ~isempty(opt.subjects{iGroup})
         idx = opt.subjects{iGroup};
+        
+        % find the subjects that belong to that group
+        groupSubIdx = find(~cellfun('isempty',strfind(subjects,group(iGroup).name))) ; % compare the subjects with the group name 
+        groupSubs = subjects(groupSubIdx) ;                                  % Get the index of the subjects corresponding to this group
+        group(iGroup).subNumber = groupSubs(idx);                            % SUBJECT ID .. con01 , con02 , etc.
+        %group(iGroup).subNumber = [group(iGroup).name, subjects(idx)];      % SUBJECT ID .. con01 , con02 , etc. OLD LINE
+        group(iGroup).numSub = length(group(iGroup).subNumber) ;             % Number of subjects in the group
+        
     else
         % in case no group was specified (e.g. sub-01) we need a way to still
         % get the subjects ID
@@ -41,12 +49,13 @@ for iGroup = 1:numel(opt.groups) % for each group
         else
             idx = strfind(subjects, group(iGroup).name);
             idx = find(~cellfun('isempty', idx));
-        end
+        end      
+        group(iGroup).subNumber = subjects(idx);                            % SUBJECT ID .. con01 , con02 , etc.
+        group(iGroup).numSub = length(group(iGroup).subNumber) ;            % Number of subjects in the group
+        
     end
-
-    group(iGroup).subNumber = subjects(idx);                            % SUBJECT ID .. con01 , con02 , etc.
-    group(iGroup).numSub = length(group(iGroup).subNumber) ;            % Number of subjects in the group
-
+    
+    
     fprintf(1,'WILL WORK ON SUBJECTS\n')
     disp(group(iGroup).subNumber)
 end
