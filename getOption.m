@@ -3,51 +3,63 @@ function opt = getOption()
 % slice timing correction, pre-processing, FFX, RFX.
 
 if nargin<1
-    opt = [];
+ opt = [];
 end
 
 % group of subjects to analyze
-opt.groups = {''};    % {'blnd', 'ctrl'};
+opt.groups = {''};
 % suject to run in each group
-opt.subjects = {[1:2]};  % {[1:2], [1:2]};
+opt.subjects = {[1:2]};
+
 
 % task to analyze
-opt.taskName = 'visMotion';
-
-% The directory where the derivatives are located
-% opt.derivativesDir = '/Users/mohamed/Desktop/MotionWorkshop/derivatives';
-opt.derivativesDir = '/home/remi/BIDS/motion_stat/raw';
+opt.taskName = 'MotionDecoding';
 
 
-% Specify the number of dummies that you want to be removed.
-opt.numDummies = 0;
-opt.dummyPrefix = 'dr_';
+% The directory where the data are located
+opt.dataDir = '/Users/mohamed/Desktop/MotionWorkshop/raw';
+opt.dataDir = '/Users/mohamed/Desktop/Data/raw';
+
 
 % Options for slice time correction
-opt.STC_referenceSlice = []; % reference slice: middle acquired slice (NOTE: Middle in time of acquisition, not space)
-% If  slice order is entered in time unit (ms) doing  so,  the  next  item  (Reference Slice) will contain a reference time (in
-% ms) instead of the slice index of the reference slice.
+% If left unspecified the slice timing will be done using the mid-volume acquisition
+% time point as reference.
+% Slice order must be entered in time unit (ms) (this is the BIDS way of doing things)
+% instead of the slice index of the reference slice (the "SPM" way of doing things).
+% More info here: https://en.wikibooks.org/wiki/SPM/Slice_Timing
+opt.sliceOrder = [];
+opt.STC_referenceSlice = [];
 
-opt.sliceOrder = []; % TO BE USED ONLY IF SPM_BIDS CAN'T EXTRACT SLICE INFORMATION
 
 % Options for normalize
 % Voxel dimensions for resampling at normalization of functional data or leave empty [ ].
-opt.funcVoxelDims = [];  
+opt.funcVoxelDims = [];
+
 
 % Suffix output directory for the saved jobs
-opt.JOBS_dir = fullfile(opt.derivativesDir, 'JOBS', opt.taskName);
+opt.JOBS_dir = fullfile(opt.dataDir, '..', 'derivatives', 'SPM12_CPPL', 'JOBS', opt.taskName);
 
-% opt.contrastList = {...
-%     {'VisMot'}; ...
-%     {'VisStat'}; ...
-%    % {'VisMot-VisStatic'}; ...
-%     };
 
 % specify the model file that contains the contrasts to compute
-opt.model.file = fullfile('/home/remi/github/CPP_BIDS_SPM_pipeline', 'model-motionloc_smdl.json');
+opt.model.univariate.file = '/Users/mohamed/Documents/GitHub/BIDS_fMRI_scripts/model-motionDecodingUnivariate_smdl.json';
+opt.model.multivariate.file = '/Users/mohamed/Documents/GitHub/BIDS_fMRI_scripts/model-motionDecodingMultivariate_smdl.json';
+
+
+% specify the result to compute
+opt.result.Steps(1) = struct(...
+    'Level',  'dataset', ...
+    'Contrasts', struct(...
+                    'Name', 'Vis_U', ... % has to match one of the contrast defined in the model json file
+                    'Mask', false, ... % this might need improving if a mask is required
+                    'MC', 'none', ... FWE, none, FDR
+                    'p', 0.05, ...
+                    'k', 0, ...
+                    'NIDM', true) );
+
 
 % Save the opt variable as a mat file to load directly in the preprocessing
 % scripts
 save('opt.mat','opt')
+
 
 end

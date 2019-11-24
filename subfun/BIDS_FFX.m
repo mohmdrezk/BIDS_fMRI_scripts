@@ -1,4 +1,4 @@
-function BIDS_FFX(action, degreeOfSmoothing, opt)
+function BIDS_FFX(action, degreeOfSmoothing, opt, isMVPA)
 % This scripts builds up the design matrix for each subject.
 % It has to be run in 2 separate steps (action) :
 % case 1 = fMRI design and estimate
@@ -18,13 +18,27 @@ if nargin<3
     fprintf('opt.mat file loaded \n\n')
 end
 
+if nargin<4
+    isMVPA = 0;
+end
 
+% Suffix definition (MVPA or not)
+if isMVPA
+    mvpaSuffix = 'MVPA_';
+else
+    mvpaSuffix = '';
+end
 
 %%
 % load the subjects/Groups information and the task name
 [group, opt, BIDS] = getData(opt);
 
 % creates prefix to look for
+% if opt.isMVPA
+%     [prefix, motionRegressorPrefix] = getPrefix('MVPA', opt, degreeOfSmoothing);
+% else
+%     [prefix, motionRegressorPrefix] = getPrefix('FFX', opt, degreeOfSmoothing);
+% end
 [prefix, motionRegressorPrefix] = getPrefix('FFX', opt, degreeOfSmoothing);
 
 % Check the slice timing information is not in the metadata and not added
@@ -81,7 +95,7 @@ switch action
                 matlabbatch{1}.spm.stats.fmri_spec.timing.fmri_t0 = refBin;
 
                 % The Directory to save the FFX files (Create it if it doesnt exist)
-                ffxDir = getFFXdir(subNumber, degreeOfSmoothing, opt);
+                ffxDir = getFFXdir(subNumber, degreeOfSmoothing, opt, isMVPA);
 
                 if exist(ffxDir,'dir') % If it exists, issue a warning that it has been overwritten
                     fprintf(1,'A DIRECTORY WITH THIS NAME ALREADY EXISTED AND WAS OVERWRITTEN, SORRY \n');
@@ -97,12 +111,12 @@ switch action
 
                 %%
                 % identify sessions for this subject
-                [sessions, numSessions] = getSessions(BIDS, subNumber, opt);
+                [sessions, numSessions] = getInfo(BIDS, subNumber, opt, 'Sessions');
 
                 for iSes = 1:numSessions % For each session
 
                     % get all runs for that subject across all sessions
-                    [runs, numRuns] = getRuns(BIDS, subNumber, sessions{iSes}, opt);
+                    [runs, numRuns] = getInfo(BIDS, subNumber, opt, 'Runs', sessions{iSes});
 
                     for iRun = 1:numRuns % For each run
 
@@ -125,27 +139,8 @@ switch action
                             fullfile(subFuncDataDir, ...
                             ['rp_', motionRegressorPrefix, fileName(1:end-4),'.txt']);
 
-
-
-
-
-
-
-
-
-
                         % Convert the tsv files to a mat file to be used by SPM
-                        % DO WE NEED TO TRIM ONSET BY A DURATION EQUIVALENT
-                        % TO THE NUMBER OF DUMMIES REMOVED
                         convertTsv2mat(tsvFile{sesCounter,1})
-
-
-
-
-
-
-
-
 
                         matlabbatch{1}.spm.stats.fmri_spec.sess(sesCounter).scans = cellstr(files);
 
@@ -207,7 +202,7 @@ switch action
                 JOBS_dir = fullfile(opt.JOBS_dir, subNumber);
                 [~, ~, ~] = mkdir(JOBS_dir);
 
-                save(fullfile(JOBS_dir, ['jobs_matlabbatch_SPM12_ffx_',...
+                save(fullfile(JOBS_dir, ['jobs_matlabbatch_SPM12_FFX_', mvpaSuffix,...
                     num2str(degreeOfSmoothing),'_',opt.taskName,'.mat']), ...
                     'matlabbatch')
 
@@ -233,12 +228,12 @@ switch action
                     groupName,iSub,subNumber)
 
                 % ffx folder
-                ffxDir = getFFXdir(subNumber, degreeOfSmoothing, opt);
+                ffxDir = getFFXdir(subNumber, degreeOfSmoothing, opt, isMVPA);
 
                 JOBS_dir = fullfile(opt.JOBS_dir, subNumber);
 
                 % Create Contrasts
-                [~, contrasts] = pmCon(ffxDir, opt.taskName, opt);
+                contrasts = pmCon(ffxDir, opt.taskName, opt, isMVPA);
 
                 matlabbatch{1}.spm.stats.con.spmmat = cellstr(fullfile(ffxDir,'SPM.mat'));
 
@@ -252,7 +247,7 @@ switch action
 
                 % Save ffx matlabbatch in JOBS
                 save(fullfile(JOBS_dir, ...
-                    ['jobs_matlabbatch_SPM12_ffx_',...
+                    ['jobs_matlabbatch_SPM12_ffx_', mvpaSuffix,...
                     num2str(degreeOfSmoothing),'_',...
                     opt.taskName,'_Contrasts.mat']), ...
                     'matlabbatch') % save the matlabbatch
@@ -261,7 +256,7 @@ switch action
                 toc
             end
 
-        end % switch
+        end
 end
 
 end
